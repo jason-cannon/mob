@@ -310,6 +310,13 @@ func execute(command string, parameter []string, configuration Configuration) {
 		} else {
 			help()
 		}
+	case "c", "create": {
+		if (len(parameter) > 0) {
+			create(parameter[0], configuration)
+		} else {
+			help()
+		}
+	}
 	case "moo":
 		moo(configuration)
 	case "sw", "squash-wip":
@@ -512,6 +519,18 @@ func reset(configuration Configuration) {
 		git("push", "--no-verify", configuration.RemoteName, "--delete", currentWipBranch)
 	}
 	sayInfo("Branches " + currentWipBranch + " and " + configuration.RemoteName + "/" + currentWipBranch + " deleted")
+}
+
+func create(branchName string, configuration Configuration) {
+	git("fetch", configuration.RemoteName)
+	if (hasLocalBranch(branchName) || hasRemoteBranch(branchName, configuration)) {
+		sayError(fmt.Sprintf("Branch by the name of %s already exists", branchName))
+	} else {
+		git("pull")
+		git("checkout", "-b", branchName)
+		git("push","-u",configuration.RemoteName, branchName)
+		start(configuration)
+	}
 }
 
 func start(configuration Configuration) {
@@ -892,11 +911,12 @@ func help() {
 	output := `mob enables a smooth Git handover
 
 Basic Commands:
-  start              start mob session from base branch in wip branch
-  next               handover changes in wip branch to next person
-  done               squashes all changes in wip branch to index in base branch
-  reset              removes local and remote wip branch
-
+  start               start mob session from base branch in wip branch
+  next                handover changes in wip branch to next person
+  done                squashes all changes in wip branch to index in base branch
+  reset               removes local and remote wip branch
+  create <branchName> creates a branch, pushes it to your remote, and runs start
+	
 Basic Commands(Options):
   start [<minutes>]                      Start a <minutes> timer
     [--include-uncommitted-changes|-i]   Move uncommitted changes to wip branch
@@ -910,6 +930,7 @@ Basic Commands(Options):
     [--squash]                           Squash commits from wip branch
   reset 
     [--branch|-b <branch-postfix>]       Set wip branch to 'mob/<base-branch>/<branch-postfix>'
+	
 
 Experimental Commands:
   squash-wip                             Combines wip commits in wip branch with subsequent manual commits to leave only manual commits.
